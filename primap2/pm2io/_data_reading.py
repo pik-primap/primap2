@@ -41,6 +41,182 @@ NA_VALUES = [
 ]
 
 
+def convert_long_dataframe_if(
+    data_long: pd.DataFrame,
+    *,
+    coords_cols: Dict[str, str],
+    coords_defaults: Optional[Dict[str, Any]] = None,
+    coords_terminologies: Dict[str, str],
+    coords_value_mapping: Optional[Dict[str, Any]] = None,
+    coords_value_filling: Optional[Dict[str, Dict[str, Dict]]] = None,
+    filter_keep: Optional[Dict[str, Dict[str, Any]]] = None,
+    filter_remove: Optional[Dict[str, Dict[str, Any]]] = None,
+    meta_data: Optional[Dict[str, Any]] = None,
+    time_format: str = "%Y-%m-%d",
+) -> pd.DataFrame:
+    """convert a DataFrame in long (tidy) format into the PRIMAP2 interchange format.
+
+    Columns can be renamed or filled with default values to match the PRIMAP2 structure.
+    Where we refer to "dimensions" in the parameter description below we mean the basic
+    dimension names without the added terminology (e.g. "area" not "area (ISO3)"). The
+    terminology information will be added by this function. You can not use the short
+    dimension names in the attributes (e.g. "cat" instead of "category").
+
+    Parameters
+    ----------
+    data_long: str, pd.DataFrame
+        Long format DataFrame file which will be converted.
+
+    coords_cols : dict
+        Dict where the keys are column names in the files to be read and the value is
+        the dimension in PRIMAP2. To specify the data column containing the observable,
+        use the "data" key. For secondary categories use a ``sec_cats__`` prefix.
+
+    coords_defaults : dict, optional
+        Dict for default values of coordinates / dimensions not given in the csv files.
+        The keys are the dimension names and the values are the values for
+        the dimensions. For secondary categories use a ``sec_cats__`` prefix.
+
+    coords_terminologies : dict
+        Dict defining the terminologies used for the different coordinates (e.g. ISO3
+        for area). Only possible coordinates here are: area, category, scenario,
+        entity, and secondary categories. For secondary categories use a ``sec_cats__``
+        prefix. All entries different from "area", "category", "scenario", "entity", and
+        ``sec_cats__<name>`` will raise a ValueError.
+
+    coords_value_mapping : dict, optional
+        A dict with primap2 dimension names as keys. Values are dicts with input values
+        as keys and output values as values. A standard use case is to map gas names
+        from input data to the standardized names used in primap2.
+        Alternatively a value can also be a function which transforms one CSV metadata
+        value into the new metadata value.
+        A third possibility is to give a string as a value, which defines a rule for
+        translating metadata values. For the "category", "entity", and "unit" columns,
+        the rule "PRIMAP1" is available, which translates from PRIMAP1 metadata to
+        PRIMAP2 metadata.
+
+    coords_value_filling : dict, optional
+        A dict with primap2 dimension names as keys. These are the target columns where
+        values will be filled (or replaced). Vales are dicts with primap2 dimension names
+        as keys. These are the source columns. The values are dicts with source value -
+        target value mappings.
+        The value filling can do everything that the value mapping can, but while mapping
+        can only replace values within a column using information from that column, the
+        filing function can also fill or replace data based on values from a different
+        column.
+        This can be used to e.g. fill missing category codes based on category names or
+        to replace category codes which do not meet the terminology using the category
+        names.
+
+    filter_keep : dict, optional
+        Dict defining filters of data to keep. Filtering is done before metadata
+        mapping, so use original metadata values to define the filter. Column names are
+        as in the csv file. Each entry in the dict defines an individual filter.
+        The names of the filters have no relevance. Default: keep all data.
+
+    filter_remove : dict, optional
+        Dict defining filters of data to remove. Filtering is done before metadata
+        mapping, so use original metadata values to define the filter. Column names are
+        as in the csv file. Each entry in the dict defines an individual filter.
+        The names of the filters have no relevance.
+
+    meta_data : dict, optional
+        Meta data for the whole dataset. Will end up in the dataset-wide attrs. Allowed
+        keys are "references", "rights", "contact", "title", "comment", "institution",
+        and "history". Documentation about the format and meaning of the meta data can
+        be found in the
+        `data format documentation <https://primap2.readthedocs.io/en/stable/data_format_details.html#dataset-attributes>`_.  # noqa: E501
+
+    time_format : str, optional
+        strftime style format used to format the time information for the data columns
+        in the interchange format.
+        Default: "%F", i.e. the ISO 8601 date format.
+
+    Returns
+    -------
+    obj: pd.DataFrame
+        pandas DataFrame with the read data
+
+    Examples
+    --------
+    *Example for meta_mapping*::
+
+        meta_mapping = {
+            'pyCPA_col_1': {'col_1_value_1_in': 'col_1_value_1_out',
+                            'col_1_value_2_in': 'col_1_value_2_out',
+                            },
+            'pyCPA_col_2': {'col_2_value_1_in': 'col_2_value_1_out',
+                            'col_2_value_2_in': 'col_2_value_2_out',
+                            },
+        }
+
+    *Example for filter_keep*::
+
+        filter_keep = {
+            'f_1': {'variable': ['CO2', 'CH4'], 'region': 'USA'},
+            'f_2': {'variable': 'N2O'}
+        }
+
+    This example filter keeps all CO2 and CH4 data for the USA and N2O data for all
+    countries
+
+    *Example for filter_remove*::
+
+        filter_remove = {
+            'f_1': {'scenario': 'HISTORY'},
+        }
+
+    This filter removes all data with 'HISTORY' as scenario
+
+    """
+    # Check and prepare arguments
+    if coords_defaults is None:
+        coords_defaults = {}
+    if meta_data is None:
+        attrs = {}
+    else:
+        attrs = meta_data.copy()
+
+    check_mandatory_dimensions(coords_cols, coords_defaults)
+    check_overlapping_specifications(coords_cols, coords_defaults)
+
+    filter_data(data_long, filter_keep, filter_remove)
+
+    add_dimensions_from_defaults(
+        data_long, coords_defaults, additional_allowed_coords=["time"]
+    )
+
+    naming_attrs = rename_columns(
+        data_long, coords_cols, coords_defaults, coords_terminologies
+    )
+
+    attrs.update(naming_attrs)
+
+    if coords_value_mapping is not None:
+        map_metadata(data_long, attrs=attrs, meta_mapping=coords_value_mapping)
+
+    if coords_value_filling is not None:
+        data_long = fill_from_other_col(
+            data_long, attrs=attrs, coords_value_filling=coords_value_filling
+        )
+
+    coords = list(set(data_long.columns.values) - {"data"})
+
+    harmonize_units(data_long, dimensions=coords, attrs=attrs)
+
+    data_long["time"] = pd.to_datetime(data_long["time"], format=time_format)
+
+    data, coords = long_to_wide(data_long, time_format=time_format)
+
+    data, coords = sort_columns_and_rows(data, dimensions=coords)
+
+    data.attrs = interchange_format_attrs_dict(
+        xr_attrs=attrs, time_format=time_format, dimensions=coords
+    )
+
+    return data
+
+
 def read_long_csv_file_if(
     filepath_or_buffer: Union[str, Path, IO],
     *,
@@ -155,46 +331,22 @@ def read_long_csv_file_if(
     This filter removes all data with 'HISTORY' as scenario
 
     """
-    # Check and prepare arguments
-    if coords_defaults is None:
-        coords_defaults = {}
-    if meta_data is None:
-        attrs = {}
-    else:
-        attrs = meta_data.copy()
-
     check_mandatory_dimensions(coords_cols, coords_defaults)
     check_overlapping_specifications(coords_cols, coords_defaults)
 
     data_long = read_long_csv(filepath_or_buffer, coords_cols)
 
-    filter_data(data_long, filter_keep, filter_remove)
-
-    add_dimensions_from_defaults(
-        data_long, coords_defaults, additional_allowed_coords=["time"]
+    return convert_long_dataframe_if(
+        data_long=data_long,
+        coords_cols=coords_cols,
+        coords_defaults=coords_defaults,
+        coords_terminologies=coords_terminologies,
+        coords_value_mapping=coords_value_mapping,
+        filter_keep=filter_keep,
+        filter_remove=filter_remove,
+        meta_data=meta_data,
+        time_format=time_format,
     )
-
-    naming_attrs = rename_columns(
-        data_long, coords_cols, coords_defaults, coords_terminologies
-    )
-    attrs.update(naming_attrs)
-
-    if coords_value_mapping is not None:
-        map_metadata(data_long, attrs=attrs, meta_mapping=coords_value_mapping)
-
-    coords = list(set(data_long.columns.values) - {"data"})
-
-    harmonize_units(data_long, dimensions=coords, attrs=attrs)
-
-    data, coords = long_to_wide(data_long, time_format=time_format)
-
-    data, coords = sort_columns_and_rows(data, dimensions=coords)
-
-    data.attrs = interchange_format_attrs_dict(
-        xr_attrs=attrs, time_format=time_format, dimensions=coords
-    )
-
-    return data
 
 
 def long_to_wide(
@@ -539,6 +691,58 @@ def filter_data(
     data.reset_index(drop=True, inplace=True)
 
 
+def fill_from_other_col(
+    df: pd.DataFrame,
+    *,
+    coords_value_filling: Dict[str, Dict[str, Dict[str, str]]],
+    attrs: Dict[str, Any],
+) -> pd.DataFrame:
+    """
+    This function fills value in one column based on values in other columns.
+    It can be used to fill NaN values or to replace e.g. non-standard or
+    non-unique category codes based on category names. It operates on pandas
+    DataFrames.
+
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Data to operate on
+
+    coords_value_filling : dict
+        A dict with primap2 dimension names as keys. These are the target columns where
+        values will be filled (or replaced). Vales are dicts with primap2 dimension
+        names as keys. These are the source columns. The values are dicts with source
+        value - target value mappings.
+        This can be used to e.g. fill missing category codes based on category names or
+        to replace category codes which do not meet the terminology using the category
+        names.
+
+    attrs : dict
+        Dataset attributes
+
+    Returns
+    -------
+    pd.DataFrame
+    """
+    dim_aliases = _alias_selection.translations_from_attrs(attrs, include_entity=True)
+
+    # loop over target columns in value mapping
+    for target_col in coords_value_filling:
+        target_info = coords_value_filling[target_col]
+        # loop over source columns
+        for source_col in target_info:
+            mapping_info = target_info[source_col]
+            # loop over cases
+            target_col_name = dim_aliases.get(target_col, target_col)
+            source_col_name = dim_aliases.get(source_col, source_col)
+            for source_value in mapping_info:
+                df.loc[df[source_col_name] == source_value, target_col_name] = df.loc[
+                    df[source_col_name] == source_value, target_col_name
+                ] = mapping_info[source_value]
+    return df
+
+
 def add_dimensions_from_defaults(
     data: pd.DataFrame,
     coords_defaults: Dict[str, Any],
@@ -561,6 +765,23 @@ def add_dimensions_from_defaults(
 
 
 def map_metadata(
+    data: pd.DataFrame,
+    *,
+    meta_mapping: Dict[str, Union[str, Callable, dict]],
+    attrs: Dict[str, Any],
+):
+    """Map the metadata according to specifications given in meta_mapping.
+    First map entity, then the rest."""
+
+    if "entity" in meta_mapping.keys():
+        meta_mapping_entity = dict(entity=meta_mapping["entity"])
+        meta_mapping.pop("entity")
+        map_metadata_unordered(data, meta_mapping=meta_mapping_entity, attrs=attrs)
+
+    map_metadata_unordered(data, meta_mapping=meta_mapping, attrs=attrs)
+
+
+def map_metadata_unordered(
     data: pd.DataFrame,
     *,
     meta_mapping: Dict[str, Union[str, Callable, dict]],
