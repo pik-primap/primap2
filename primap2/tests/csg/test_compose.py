@@ -6,7 +6,9 @@ from collections.abc import Sequence
 import numpy as np
 import pandas as pd
 import pytest
+import uncertainties
 import xarray as xr
+from uncertainties import unumpy
 
 import primap2.csg._compose
 
@@ -34,21 +36,17 @@ def get_single_ts(
 
 
 def test_substitution_strategy():
-    ts = get_single_ts(data=1.0)
-    ts[0] = np.nan
-    fill_ts = get_single_ts(data=2.0)
+    ts = get_single_ts(data=uncertainties.ufloat(1.0, 0.0, tag="a"))
+    ts[0] = uncertainties.ufloat(np.nan, 0.0, tag="a")
+    fill_ts = get_single_ts(data=uncertainties.ufloat(2.0, 0.0, tag="b"))
 
-    result_ts, result_descriptions = primap2.csg._compose.SubstitutionStrategy().fill(
+    result_ts = primap2.csg._compose.SubstitutionStrategy().fill(
         ts=ts, fill_ts=fill_ts, fill_ts_repr="B"
     )
-    assert result_ts[0] == 2.0
-    assert (result_ts[1:] == 1.0).all()
-    assert len(result_descriptions) == 1
-    assert result_descriptions[0].time == np.array(["1850"], dtype=np.datetime64)
-    assert (
-        result_descriptions[0].processing_description
-        == "substituted with corresponding values from B"
-    )
+    assert result_ts[0].item().nominal_value == 2.0
+    assert (unumpy.nominal_values(result_ts[1:]) == 1.0).all()
+    assert result_ts[0].item().tag == "b"
+    assert result_ts[1].item().tag == "a"
     assert "source" not in result_ts.coords.keys()
 
 
