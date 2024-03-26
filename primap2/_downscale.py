@@ -38,13 +38,13 @@ class DataArrayDownscalingAccessor(BaseDataArrayAccessor):
         ----------
         dim: str
           The name of the dimension which contains the basket and its contents, has to
-          be one of the dimensions in ``ds.dims``.
+          be one of the dimensions in ``da.dims``.
         basket: str
           The name of the super-category for which values are known at higher temporal
-          resolution and/or for a wider range. A value from ``ds[dimension]``.
+          resolution and/or for a wider range. A value from ``da[dimension]``.
         basket_contents: list of str
           The name of the sub-categories. The sum of all sub-categories equals the
-          basket. Values from ``ds[dimension]``.
+          basket. Values from ``da[dimension]``.
         check_consistency: bool, default True
           If for all points where the basket and all basket_contents are defined,
           it should be checked if the sum of the basket_contents actually equals
@@ -52,7 +52,7 @@ class DataArrayDownscalingAccessor(BaseDataArrayAccessor):
         sel: Selection dict, optional
           If the downscaling should only be done on a subset of the Dataset while
           retaining all other values unchanged, give a selection dictionary. The
-          downscaling will be done on ``ds.loc[sel]``.
+          downscaling will be done on ``da.loc[sel]``.
         skipna_evaluation_dims: list of str, optional
           Dimensions which should be evaluated to determine if NA values should be
           skipped entirely if missing fully. By default, no NA values are skipped.
