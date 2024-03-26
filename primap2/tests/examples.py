@@ -8,9 +8,9 @@ import primap2  # noqa: F401
 from primap2 import ureg
 
 
-def minimal_ds():
+def minimal_ds() -> xr.Dataset:
     """A valid, minimal dataset."""
-    time = pd.date_range("2000-01-01", "2020-01-01", freq="AS")
+    time = pd.date_range("2000-01-01", "2020-01-01", freq="YS")
     area_iso3 = np.array(["COL", "ARG", "MEX", "BOL"])
 
     # seed the rng with a constant to achieve predictable "randomness"
@@ -40,7 +40,7 @@ def minimal_ds():
 
 
 COORDS = {
-    "time": pd.date_range("2000-01-01", "2020-01-01", freq="AS"),
+    "time": pd.date_range("2000-01-01", "2020-01-01", freq="YS"),
     "area (ISO3)": np.array(["COL", "ARG", "MEX", "BOL"]),
     "category (IPCC 2006)": np.array(["0", "1", "2", "3", "4", "5", "1.A", "1.B"]),
     "animal (FAOSTAT)": np.array(["cow", "swine", "goat"]),
@@ -52,7 +52,7 @@ COORDS = {
 }
 
 
-def opulent_ds():
+def opulent_ds() -> xr.Dataset:
     """A valid dataset using lots of features."""
 
     # seed the rng with a constant to achieve predictable "randomness"
@@ -134,7 +134,7 @@ def opulent_ds():
     return opulent
 
 
-def opulent_str_ds():
+def opulent_str_ds() -> xr.Dataset:
     """Like the opulent dataset, but additionally with a stringly typed data variable
     "method"."""
     opulent = opulent_ds()
@@ -162,9 +162,9 @@ def opulent_str_ds():
     return opulent
 
 
-def empty_ds():
+def empty_ds() -> xr.Dataset:
     """An empty hull of a dataset with missing data."""
-    time = pd.date_range("2000-01-01", "2020-01-01", freq="AS")
+    time = pd.date_range("2000-01-01", "2020-01-01", freq="YS")
     area_iso3 = np.array(["COL", "ARG", "MEX", "BOL"])
     coords = {
         "time": time,

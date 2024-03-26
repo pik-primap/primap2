@@ -74,7 +74,7 @@ class DataArraySettersAccessor(_accessor_base.BaseDataArrayAccessor):
         ...     [[0.0, 1.0, 2.0, 3.0], [2.0, 3.0, 4.0, 5.0]],
         ...     coords=[
         ...         ("area (ISO3)", ["COL", "MEX"]),
-        ...         ("time", pd.date_range("2000", "2003", freq="AS")),
+        ...         ("time", pd.date_range("2000", "2003", freq="YS")),
         ...     ],
         ... )
         >>> da
@@ -402,7 +402,7 @@ class DatasetSettersAccessor(_accessor_base.BaseDatasetAccessor):
         >>> import xarray as xr
         >>> import numpy as np
         >>> area = ("area (ISO3)", ["COL", "MEX"])
-        >>> time = ("time", pd.date_range("2000", "2003", freq="AS"))
+        >>> time = ("time", pd.date_range("2000", "2003", freq="YS"))
         >>> ds = xr.Dataset(
         ...     {
         ...         "CO2": xr.DataArray(

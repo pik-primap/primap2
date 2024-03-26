@@ -45,7 +45,7 @@ class TestEnsureValid:
         ds = xr.Dataset(
             {
                 "area (ISO3)": ["a"],
-                "time": pd.date_range("2000-01-01", "2020-01-01", freq="AS"),
+                "time": pd.date_range("2000-01-01", "2020-01-01", freq="YS"),
             },
             attrs={"area": "area (ISO3)"},
         ).pr.quantify()
