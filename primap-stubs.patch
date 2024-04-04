@@ -1,40 +1,34 @@
-diff '--color=auto' -r -u xarray-orig/core/dataarray.pyi xarray/core/dataarray.pyi
---- xarray-orig/core/dataarray.pyi	2022-05-09 19:44:00.059497745 +0200
-+++ xarray/core/dataarray.pyi	2022-05-09 19:45:46.028378457 +0200
-@@ -26,6 +26,7 @@
- from dask.delayed import Delayed
- from iris.cube import Cube as iris_Cube
- from typing import Any, Callable, Hashable, Iterable, Literal, Mapping, Sequence
+diff '--color=auto' -ru xarray.orig/core/dataarray.pyi xarray/core/dataarray.pyi
+--- xarray.orig/core/dataarray.pyi	2023-11-15 10:36:00.509607027 +0100
++++ xarray/core/dataarray.pyi	2023-11-15 10:35:25.561354898 +0100
+@@ -1,3 +1,4 @@
 +import primap2
+ import datetime
+ import numpy as np
+ import pandas as pd
+@@ -48,6 +49,8 @@
+     def __setitem__(self, key, value) -> None: ...
 
- class _LocIndexer:
-     data_array: Incomplete
-@@ -36,6 +37,8 @@
- class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
-     dt: Incomplete
-     def __init__(self, data: Any = ..., coords: Union[Sequence[tuple], Mapping[Any, Any], None] = ..., dims: Union[Hashable, Sequence[Hashable], None] = ..., name: Hashable = ..., attrs: Mapping = ..., indexes: dict[Hashable, pd.Index] = ..., fastpath: bool = ...) -> None: ...
+ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic, DataArrayAggregations):
 +    @property
 +    def pr(self) -> primap2.accessors.PRIMAP2DataArrayAccessor: ...
+     dt: Incomplete
+     def __init__(self, data: Any = ..., coords: Sequence[Sequence[Any] | pd.Index | DataArray] | Mapping[Any, Any] | None = ..., dims: Hashable | Sequence[Hashable] | None = ..., name: Hashable | None = ..., attrs: Mapping | None = ..., indexes: Mapping[Any, Index] | None = ..., fastpath: bool = ...) -> None: ...
      def to_dataset(self, dim: Hashable = ..., *, name: Hashable = ..., promote_attrs: bool = ...) -> Dataset: ...
-     @property
-     def name(self) -> Union[Hashable, None]: ...
-diff '--color=auto' -r -u xarray-orig/core/dataset.pyi xarray/core/dataset.pyi
---- xarray-orig/core/dataset.pyi	2022-05-09 19:44:00.059497745 +0200
-+++ xarray/core/dataset.pyi	2022-05-09 19:45:37.980311296 +0200
-@@ -27,6 +27,7 @@
- from numbers import Number
- from os import PathLike
- from typing import Any, Callable, Collection, Hashable, Iterable, Iterator, Literal, Mapping, MutableMapping, Sequence, overload
+diff '--color=auto' -ru xarray.orig/core/dataset.pyi xarray/core/dataset.pyi
+--- xarray.orig/core/dataset.pyi	2023-11-15 10:36:00.513607056 +0100
++++ xarray/core/dataset.pyi	2023-11-15 10:35:25.577355012 +0100
+@@ -1,3 +1,4 @@
 +import primap2
+ import datetime
+ import numpy as np
+ import pandas as pd
+@@ -59,6 +60,8 @@
+     def __setitem__(self, key, value) -> None: ...
 
- def calculate_dimensions(variables: Mapping[Any, Variable]) -> dict[Hashable, int]: ...
- def merge_indexes(indexes: Mapping[Any, Union[Hashable, Sequence[Hashable]]], variables: Mapping[Any, Variable], coord_names: set[Hashable], append: bool = ...) -> tuple[dict[Hashable, Variable], set[Hashable]]: ...
-@@ -50,6 +51,8 @@
-
- class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
-     def __init__(self, data_vars: Mapping[Any, Any] = ..., coords: Mapping[Any, Any] = ..., attrs: Mapping[Any, Any] = ...) -> None: ...
+ class Dataset(DataWithCoords, DatasetAggregations, DatasetArithmetic, Mapping[Hashable, 'DataArray']):
 +    @property
 +    def pr(self) -> primap2.accessors.PRIMAP2DatasetAccessor: ...
+     def __init__(self, data_vars: DataVars | None = ..., coords: Mapping[Any, Any] | None = ..., attrs: Mapping[Any, Any] | None = ...) -> None: ...
+     def __eq__(self, other: DsCompatible) -> Self: ...
      @classmethod
-     def load_store(cls, store, decoder: Incomplete | None = ...) -> Dataset: ...
-     @property

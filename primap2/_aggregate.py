@@ -34,16 +34,15 @@ def select_no_scalar_dimension(
     """
     if sel is None:
         return obj
-    else:
-        sele: DatasetOrDataArray = obj.loc[sel]
-        if dim_names(obj) != dim_names(sele):
-            raise ValueError(
-                "The dimension of the selection doesn't match the dimension of the "
-                "orginal dataset. Likely you used a selection casting to a scalar "
-                "dimension, like sel={'axis': 'value'}. Please use "
-                "sel={'axis': ['value']} instead."
-            )
-        return sele
+    selection: DatasetOrDataArray = obj.loc[sel]
+    if dim_names(obj) != dim_names(selection):
+        raise ValueError(
+            "The dimension of the selection doesn't match the dimension of the "
+            "orginal dataset. Likely you used a selection casting to a scalar "
+            "dimension, like sel={'axis': 'value'}. Please use "
+            "sel={'axis': ['value']} instead."
+        )
+    return selection
 
 
 class DataArrayAggregationAccessor(BaseDataArrayAccessor):
@@ -55,11 +54,10 @@ class DataArrayAggregationAccessor(BaseDataArrayAccessor):
                 "Only one of 'dim' and 'reduce_to_dim' may be supplied, not both."
             )
 
-        if dim is None:
-            if reduce_to_dim is not None:
-                if isinstance(reduce_to_dim, str):
-                    reduce_to_dim = [reduce_to_dim]
-                dim = set(self._da.dims) - set(reduce_to_dim)
+        if dim is None and reduce_to_dim is not None:
+            if isinstance(reduce_to_dim, str):
+                reduce_to_dim = [reduce_to_dim]
+            dim = set(self._da.dims) - set(reduce_to_dim)
 
         return dim
 
