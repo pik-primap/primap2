@@ -637,7 +637,22 @@ def ensure_valid_dimensions(ds: xr.Dataset):
 
 @define(frozen=True, kw_only=True)
 class ProcessingStepDescription:
-    """Structured description of a processing step done on a timeseries."""
+    """Structured description of a processing step done on a timeseries.
+
+    Attributes
+    ----------
+    time
+        Time points for which data was changed during the processing step. Use
+        "all" if all time points were changed or it is not specified which time
+        points were changed.
+    function
+        The name of the function which did the processing.
+    description
+        Human-readable description of the processing step.
+    source
+        Optional: a short identifier for the source of the data which was used for the
+        processing.
+    """
 
     time: np.ndarray[np.datetime64] | typing.Literal["all"]
     function: str
@@ -683,7 +698,13 @@ class ProcessingStepDescription:
 
 @define(frozen=True)
 class TimeseriesProcessingDescription:
-    """Structured description of all processing steps done on a timeseries."""
+    """Structured description of all processing steps done on a timeseries.
+
+    Attributes
+    ----------
+    steps
+        Steps that were performed during processing, in order from first to last.
+    """
 
     steps: list[ProcessingStepDescription]
 
@@ -698,6 +719,12 @@ class TimeseriesProcessingDescription:
 
     @classmethod
     def deserialize(cls, b: bytes) -> "TimeseriesProcessingDescription":
-        """Parse from binary data as produced by "serilize"."""
+        """Parse from binary data as produced by "serialize".
+
+        Parameters
+        ----------
+        b
+            Binary data representing a TimeseriesProcessingDescription.
+        """
         ust = msgpack.unpackb(b, raw=False, use_list=False)
         return cls(steps=[ProcessingStepDescription.structure(x) for x in ust["steps"]])

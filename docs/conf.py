@@ -89,6 +89,7 @@ todo_include_todos = False
 
 # Generate autosummary stubs automatically
 autosummary_generate = True
+numpydoc_class_members_toctree = False
 
 
 # -- Options for HTML output -------------------------------------------

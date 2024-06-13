@@ -231,9 +231,15 @@ class DataArrayAliasSelectionAccessor(_accessor_base.BaseDataArrayAccessor):
 
     @property
     def loc(self):
-        """Attribute for location-based indexing like xr.DataArray.loc, but also
-        supports short aliases like ``area`` and translates them into the long
-        names including the corresponding category-set."""
+        """Location-based indexing like xr.DataArray.loc with added features.
+
+        Works like xarray's loc indexer, but has additional features:
+
+        * supports short aliases like ``area`` and translates them into the long names
+          including the corresponding category-set.
+        * supports negative selection (selecting everything but a specified value) using
+          ``primap2.Not``.
+        """
         return DataArrayAliasLocIndexer(self._da)
 
     def __getitem__(self, item: typing.Hashable) -> xr.DataArray:
@@ -292,7 +298,13 @@ class DatasetAliasSelectionAccessor(_accessor_base.BaseDatasetAccessor):
 
     @property
     def loc(self):
-        """Attribute for location-based indexing like xr.Dataset.loc, but also
-        supports short aliases like ``area`` and translates them into the long
-        names including the corresponding category-set."""
+        """Location-based indexing like xr.DataArray.loc with added features.
+
+        Works like xarray's loc indexer, but has additional features:
+
+        * supports short aliases like ``area`` and translates them into the long names
+          including the corresponding category-set.
+        * supports negative selection (selecting everything but a specified value) using
+          ``primap2.Not``.
+        """
         return DatasetAliasLocIndexer(self._ds)
