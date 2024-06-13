@@ -276,15 +276,11 @@ class DataArraySettersAccessor(_accessor_base.BaseDataArrayAccessor):
             # to broadcast value only to sel, but would need more careful handling
             # later.
             if new == "extend":
-                expanded, value = xr.broadcast(self._da, value)
+                expanded = xr.broadcast(self._da, value)[0]
             else:
                 expanded = self._da
-                value = value.broadcast_like(expanded)
 
             sel = self._sel_error(expanded, dim, key)
-
-            value.attrs = self._da.attrs
-            value.name = self._da.name
 
         else:
             # convert value to DataArray
@@ -314,9 +310,9 @@ class DataArraySettersAccessor(_accessor_base.BaseDataArrayAccessor):
             value = xr.DataArray(
                 value,
                 coords=[(idim, sel[idim].data) for idim in value_dims],
-                name=self._da.name,
-                attrs=self._da.attrs,
-            ).broadcast_like(sel)
+            )
+            if dim not in value_dims:
+                value = value.expand_dims({dim: key})
 
         if existing == "fillna_empty":
             if sel.count().item() > 0:
@@ -328,14 +324,22 @@ class DataArraySettersAccessor(_accessor_base.BaseDataArrayAccessor):
             existing = "fillna"
 
         if existing == "overwrite":
-            return value.combine_first(expanded)
+            cond = xr.zeros_like(value).combine_first(xr.ones_like(expanded))
+            expanded, value, cond = xr.align(expanded, value, cond, join="outer")
+            result = expanded.where(
+                cond=cond,
+                other=value.broadcast_like(expanded),
+            )
         elif existing == "fillna":
-            return expanded.combine_first(value)
+            result = expanded.combine_first(value)
         else:
             raise ValueError(
                 "If given, 'existing' must specify one of 'error', 'overwrite', "
                 f"'fillna_empty', or 'fillna', not {existing!r}."
             )
+        result.attrs = self._da.attrs
+        result.name = self._da.name
+        return result
 
 
 class DatasetSettersAccessor(_accessor_base.BaseDatasetAccessor):

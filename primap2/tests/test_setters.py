@@ -9,7 +9,7 @@ import xarray as xr
 
 from primap2 import ureg
 
-from .utils import assert_aligned_equal, assert_ds_aligned_equal
+from .utils import allclose, assert_aligned_equal, assert_ds_aligned_equal
 
 
 @pytest.fixture
@@ -426,6 +426,17 @@ class TestDsSetter:
             )
         expected = expected.pr.quantify()
         assert_ds_aligned_equal(actual, expected)
+        assert not allclose(minimal_ds["CO2"], actual["CO2"])
+
+    def test_existing_overwrite_nan(self, minimal_ds: xr.Dataset):
+        actual = minimal_ds.pr.set(
+            "area",
+            "COL",
+            xr.full_like(minimal_ds.pr.loc[{"area": "COL"}], np.nan),
+            existing="overwrite",
+        )
+        assert all(actual["CO2"].pr.loc[{"area": "COL"}].isnull())
+        assert all(~actual["CO2"].pr.loc[{"area": "ARG"}].isnull())
 
     def test_existing_fillna(self, minimal_ds: xr.Dataset, new):
         minimal_ds["CO2"].pr.loc[{"area": "COL", "time": "2001"}].pint.magnitude[:] = (
